@@ -40,12 +40,14 @@ from pathlib import Path
 
 # Import the code for the DockWidget
 from .chippy_checker_editor_dockwidget import ChippyCheckerEditorDockWidget
-from .chippy_checker_session import EditSession
 from .chippy_checker_utils import (
-    get_record_status_file,
     get_file_basename,
     display_info_pamel,
-    save_labels_to_output_dir
+    save_labels_to_output_dir,
+    write_status_records,
+    set_file_pairs,
+    read_status_records,
+    write_status_records_csv,
 )
 
 import os.path
@@ -240,54 +242,25 @@ class ChippyCheckerEditor:
         self.dockwidget.lineEdit_OutputLabelDir.setText(folder)
         self.output_label_directory = folder
 
-    def setupSession(self, record_dir, chip_dir, in_label_dir, out_label_dir):
+    def setupSession(self, records_directory, chips_directory, input_label_directory, output_label_directory):
         self.raster_file = None
         self.vector_file = None
 
-        self.chip_base = chip_dir
-        self.in_label_base = in_label_dir
-        self.out_label_base = out_label_dir
+        self.chip_base = chips_directory
+        self.in_label_base = input_label_directory
+        self.out_label_base = output_label_directory
 
-        self.set_record_dir(record_dir)
-
-        self.set_file_pairs()
-        self.reset_chip()
-
-    def set_file_pairs(self):
-        """
-        set image and label file pairs of the form (anyname).tif and (samename).geojson
-        """
-        chip_files = os.listdir(self.chip_base)
-
-        # extract image names and construct the paths of the label files
-        basenames = [os.path.splitext(cfile)[0] for cfile in chip_files if cfile.endswith(".tif")]
-
-        file_pairs = []
-        for basename in basenames:
-            the_image = os.path.join(self.chip_base, f"{basename}.tif")
-            the_geojson = os.path.join(self.in_label_base, f"{basename}.geojson")
-            if not os.path.exists(the_geojson):
-                raise FileNotFoundError(f"Missing geojson file: {the_geojson}")
-            file_pairs.append((the_image, the_geojson))
-        self.chip_iterator = iter(file_pairs)
-
-    def set_output_json_file(self, output_json_file):
-        self.output_json_file = output_json_file
-        self.json_records = None
-        if os.path.exists(output_json_file):
-            with open(output_json_file, "r") as fh:
-                records = fh.read()
-                if records:
-                    self.json_records = json.loads(records)
-                else:
-                    self.json_records = []
-        else:
-            self.json_records = []
+        # Set records status file
+        self.output_json_file = os.path.join(records_directory, "chip_review.json")
+        self.json_records = read_status_records(self.output_json_file)
+        # Init a empty record
         self.current_json_record = {}
 
-    def set_record_dir(self, record_dir):
-        output_json_file = os.path.join(record_dir, "chip_review.json")
-        self.set_output_json_file(output_json_file)
+        # self.set_record_dir(records_directory)
+
+        self.chip_iterator, self.number_chips = set_file_pairs(chips_directory, input_label_directory)
+
+        self.reset_chip()
 
     def reset_chip(self):
         """
@@ -381,14 +354,6 @@ class ChippyCheckerEditor:
             output_label_directory,
         )
 
-    def write_to_output_json_file(self):
-        if self.output_json_file == None:
-            print("json output file not defined")
-            return
-        with open(self.output_json_file, "w") as outfile:
-            outfile.write(json.dumps(self.json_records))
-        # self.writeCsvFile()
-
     def get_comment(self):
         """Get comment from extEdit
 
@@ -411,7 +376,10 @@ class ChippyCheckerEditor:
         self.current_json_record["comment"] = self.get_comment()
         self.json_records.append(self.current_json_record)
         self.current_json_record = {}
-        self.write_to_output_json_file()
+        # Write in json and csv file th estatus
+        write_status_records(self.output_json_file, self.json_records)
+        write_status_records_csv(self.output_json_file, self.json_records)
+
         self.reset_chip()
         return
 

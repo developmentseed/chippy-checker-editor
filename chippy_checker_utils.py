@@ -1,7 +1,3 @@
-# Edit CHIP_DIR, INPUT_LABEL_DIR, OUTPUT_LABEL_DIR settings.
-# Then run from the python console in QGIS.
-
-
 import sys, os, re, argparse
 from matplotlib.patches import Polygon
 from pathlib import Path
@@ -11,54 +7,22 @@ from qgis.core import *
 from qgis.gui import *
 from qgis.utils import *
 
-
 def set_file_pairs(chips_directory, input_label_directory):
-    """set image and label file pairs of the form (anyname).tif and (samename).geojson
-
-    Args:
-        chips_directory (str): Location of chips
-        input_label_directory (str): Location of geojson labels
-
-    Raises:
-        FileNotFoundError: _description_
-
-    Returns:
-        _type_: _description_
     """
-    chip_files = os.listdir(chips_directory)
-
+    set image and label file pairs tif and geojson
+    """
+    list_files = os.listdir(chips_directory)
     # extract image names and construct the paths of the label files
-    basenames = [os.path.splitext(cfile)[0] for cfile in chip_files if cfile.endswith(".tif")]
+    chip_basename_files = [os.path.splitext(cfile)[0] for cfile in list_files if cfile.endswith(".tif")]
+
     file_pairs = []
-    for basename in basenames:
-        chip_file = os.path.join(chips_directory, f"{basename}.tif")
-        geojson_file = os.path.join(input_label_directory, f"{basename}.geojson")
-        # if not os.path.exists(geojson_file):
-        #     raise FileNotFoundError(f"Missing geojson file: {geojson_file}")
-        geojson_file_exist = False
-        if os.path.exists(geojson_file):
-            geojson_file_exist = True
-        file_pairs.append((basename, geojson_file_exist, False))
-    return file_pairs
-
-
-def get_record_status_file(records_directory, chips_directory, input_label_directory):
-
-    records_json_file = os.path.join(records_directory, "chip_review_temporal.csv")
-    if not os.path.exists(records_json_file):
-        chip_files = set_file_pairs(chips_directory, input_label_directory)
-        with open(records_json_file, "w", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerows(chip_files)
-    return records_json_file
-
-
-def replace_line(file_name, line_num, text):
-    lines = open(file_name, "r").readlines()
-    lines[line_num] = text
-    out = open(file_name, "w")
-    out.writelines(lines)
-    out.close()
+    for chip_basename in chip_basename_files:
+        the_image = os.path.join(chips_directory, f"{chip_basename}.tif")
+        the_geojson = os.path.join(input_label_directory, f"{chip_basename}.geojson")
+        if not os.path.exists(the_geojson):
+            raise FileNotFoundError(f"Missing geojson file: {the_geojson}")
+        file_pairs.append((the_image, the_geojson))
+    return iter(file_pairs), len(file_pairs)
 
 
 def get_file_basename(filename):
@@ -79,21 +43,41 @@ def save_labels_to_output_dir(label_geojson_file, output_label_directory, vlayer
     return
 
 
-# def set_output_json_file(self, output_json_file):
-#     self.output_json_file = output_json_file
-#     self.json_records = None
-#     if os.path.exists(output_json_file):
-#         with open(output_json_file, "r") as fh:
-#             records = fh.read()
-#             if records:
-#                 self.json_records = json.loads(records)
-#             else:
-#                 self.json_records = []
-#     else:
-#         self.json_records = []
-#     self.current_json_record = {}
+def write_status_records(status_json_file, json_records):
+    if status_json_file == None:
+        print("json output file not defined")
+    with open(status_json_file, "w") as outfile:
+        outfile.write(json.dumps(json_records))
+    return
 
 
-# def set_record_dir(self, record_dir):
-#     output_json_file = os.path.join(record_dir, "chip_review.json")
-#     self.set_output_json_file(output_json_file)
+def write_status_records_csv(status_json_file, json_records):
+    file_path, file_basename, file_ext = get_file_basename(status_json_file)
+    csvfile = os.path.join(file_path, f"{file_basename}.csv")
+    # remove files in case exist
+    if os.path.exists(csvfile):
+        os.remove(csvfile)
+    # write the csv file
+    if len(json_records) == 0:
+        return
+    keys = json_records[0].keys()
+    csv_file = open(csvfile, "w")
+    dict_writer = csv.DictWriter(csv_file, keys)
+    dict_writer.writeheader()
+    dict_writer.writerows(json_records)
+    csv_file.close()
+    return
+
+
+def read_status_records(status_json_file):
+    json_records = None
+    if os.path.exists(status_json_file):
+        with open(status_json_file, "r") as fh:
+            records = fh.read()
+            if records:
+                json_records = json.loads(records)
+            else:
+                json_records = []
+    else:
+        json_records = []
+    return json_records
