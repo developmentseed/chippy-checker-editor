@@ -22,6 +22,7 @@
  *                                                                         *
  ***************************************************************************/
 """
+from cProfile import label
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QFileDialog
@@ -242,37 +243,10 @@ class ChippyCheckerEditor:
         self.dockwidget.lineEdit_OutputLabelDir.setText(folder)
         self.output_label_directory = folder
 
-    def setupSession(self, records_directory, chips_directory, input_label_directory, output_label_directory):
-        self.raster_file = None
-        self.vector_file = None
-
-        self.chip_base = chips_directory
-        self.in_label_base = input_label_directory
-        self.out_label_base = output_label_directory
-
-        # Set records status file
-        self.output_json_file = os.path.join(records_directory, "chip_review.json")
-        self.json_records = read_status_records(self.output_json_file)
-        # Init a empty record
-        self.current_json_record = {}
-
-        # self.set_record_dir(records_directory)
-
-        self.chip_iterator, self.number_chips = set_file_pairs(chips_directory, input_label_directory)
-
-        self.reset_chip()
-
     def reset_chip(self):
         """
         operations common to accepting and rejecting the previous chip
         """
-        # clear the previous project
-        # prevent it asking you to save changes
-        #         the_project = QgsProject.instance()
-        #         the_project.setDirty(False)
-        #         the_project.removeAllMapLayers()
-        # #        the_project.clear()
-
         while True:
             try:
                 the_pair = next(self.chip_iterator)
@@ -338,21 +312,38 @@ class ChippyCheckerEditor:
 
     ##### Select chips inputs dir #####
     def start_task(self):
+        """Start reviewing chips.
+        """
+        # Clear all other layers
+        QgsProject.instance().clear()
+
         # records_dir = self.dockwidget.lineEdit_Records.text()
         # chips_dir = self.dockwidget.lineEdit_Chips.text()
         # output_dir = self.dockwidget.lineEdit_Output.text()
-
         records_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets"
         chips_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/source"
         input_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/labels"
         output_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/ouput_labels"
+        
+        self.raster_file = None
+        self.vector_file = None
 
-        self.setupSession(
-            records_directory,
-            chips_directory,
-            input_label_directory,
-            output_label_directory,
-        )
+        self.chip_base = chips_directory
+        self.in_label_base = input_label_directory
+        self.out_label_base = output_label_directory
+
+        # Set records status file
+        self.output_json_file = os.path.join(records_directory, "chip_review.json")
+        self.json_records = read_status_records(self.output_json_file)
+
+        # Init a empty record
+        self.current_json_record = {}
+
+        # Match files
+        self.chip_iterator, self.number_chips = set_file_pairs(chips_directory, input_label_directory)
+
+        # Start interacting
+        self.reset_chip()
 
     def get_comment(self):
         """Get comment from extEdit
