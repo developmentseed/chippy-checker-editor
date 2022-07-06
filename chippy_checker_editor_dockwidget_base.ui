@@ -6,14 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>328</width>
-    <height>284</height>
+    <width>312</width>
+    <height>395</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
-    <width>265</width>
-    <height>230</height>
+    <width>308</width>
+    <height>333</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -21,37 +21,62 @@
   </property>
   <widget class="QWidget" name="dockWidgetContents">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="5" column="0" colspan="3">
-     <widget class="QWidget" name="widget" native="true">
-      <property name="autoFillBackground">
-       <bool>false</bool>
+    <item row="0" column="2">
+     <widget class="QPushButton" name="pushButton_Records">
+      <property name="text">
+       <string>...</string>
       </property>
-      <widget class="QPushButton" name="pushButton_AcceptChip">
-       <property name="geometry">
-        <rect>
-         <x>2</x>
-         <y>10</y>
-         <width>151</width>
-         <height>32</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Accept Chip</string>
-       </property>
-      </widget>
-      <widget class="QPushButton" name="pushButton_RejectChip">
-       <property name="geometry">
-        <rect>
-         <x>150</x>
-         <y>10</y>
-         <width>151</width>
-         <height>32</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Reject Chip</string>
-       </property>
-      </widget>
+     </widget>
+    </item>
+    <item row="3" column="2">
+     <widget class="QPushButton" name="pushButton_OutputLabelDir">
+      <property name="text">
+       <string>...</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="2">
+     <widget class="QPushButton" name="pushButton_Chips">
+      <property name="text">
+       <string>...</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="0">
+     <widget class="QLabel" name="label_2">
+      <property name="text">
+       <string>Chips directory</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="1">
+     <widget class="QLineEdit" name="lineEdit_Chips"/>
+    </item>
+    <item row="3" column="1">
+     <widget class="QLineEdit" name="lineEdit_OutputLabelDir"/>
+    </item>
+    <item row="2" column="0">
+     <widget class="QLabel" name="label_4">
+      <property name="text">
+       <string>Input label dir...</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="1">
+     <widget class="QLineEdit" name="lineEdit_InputLabelDir"/>
+    </item>
+    <item row="2" column="2">
+     <widget class="QPushButton" name="pushButton_InputLabelDir">
+      <property name="text">
+       <string>...</string>
+      </property>
+     </widget>
+    </item>
+    <item row="6" column="1" colspan="2">
+     <widget class="QPushButton" name="pushButton_AcceptChip">
+      <property name="text">
+       <string>Accept Chip</string>
+      </property>
      </widget>
     </item>
     <item row="0" column="1">
@@ -78,56 +103,15 @@
       </property>
      </widget>
     </item>
-    <item row="1" column="0">
-     <widget class="QLabel" name="label_2">
+    <item row="6" column="0">
+     <widget class="QPushButton" name="pushButton_RejectChip">
       <property name="text">
-       <string>Chips directory</string>
+       <string>Reject Chip</string>
       </property>
      </widget>
     </item>
-    <item row="1" column="2">
-     <widget class="QPushButton" name="pushButton_Chips">
-      <property name="text">
-       <string>...</string>
-      </property>
-     </widget>
-    </item>
-    <item row="3" column="2">
-     <widget class="QPushButton" name="pushButton_OutputLabelDir">
-      <property name="text">
-       <string>...</string>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="2">
-     <widget class="QPushButton" name="pushButton_Records">
-      <property name="text">
-       <string>...</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="1">
-     <widget class="QLineEdit" name="lineEdit_Chips"/>
-    </item>
-    <item row="3" column="1">
-     <widget class="QLineEdit" name="lineEdit_OutputLabelDir"/>
-    </item>
-    <item row="2" column="0">
-     <widget class="QLabel" name="label_4">
-      <property name="text">
-       <string>Input label dir...</string>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="1">
-     <widget class="QLineEdit" name="lineEdit_InputLabelDir"/>
-    </item>
-    <item row="2" column="2">
-     <widget class="QPushButton" name="pushButton_InputLabelDir">
-      <property name="text">
-       <string>...</string>
-      </property>
-     </widget>
+    <item row="5" column="0" colspan="3">
+     <widget class="QTextEdit" name="textEdit_CommentBox"/>
     </item>
    </layout>
   </widget>

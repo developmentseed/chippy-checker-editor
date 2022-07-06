@@ -7,6 +7,9 @@ from matplotlib.patches import Polygon
 from pathlib import Path
 import simplejson as json
 import csv
+from qgis.core import *
+from qgis.gui import *
+from qgis.utils import *
 
 
 def set_file_pairs(chips_directory, input_label_directory):
@@ -25,9 +28,7 @@ def set_file_pairs(chips_directory, input_label_directory):
     chip_files = os.listdir(chips_directory)
 
     # extract image names and construct the paths of the label files
-    basenames = [
-        os.path.splitext(cfile)[0] for cfile in chip_files if cfile.endswith(".tif")
-    ]
+    basenames = [os.path.splitext(cfile)[0] for cfile in chip_files if cfile.endswith(".tif")]
     file_pairs = []
     for basename in basenames:
         chip_file = os.path.join(chips_directory, f"{basename}.tif")
@@ -46,24 +47,36 @@ def get_record_status_file(records_directory, chips_directory, input_label_direc
     records_json_file = os.path.join(records_directory, "chip_review_temporal.csv")
     if not os.path.exists(records_json_file):
         chip_files = set_file_pairs(chips_directory, input_label_directory)
-        with open(records_json_file, 'w', newline='') as f:
+        with open(records_json_file, "w", newline="") as f:
             writer = csv.writer(f)
             writer.writerows(chip_files)
     return records_json_file
 
+
 def replace_line(file_name, line_num, text):
-    lines = open(file_name, 'r').readlines()
+    lines = open(file_name, "r").readlines()
     lines[line_num] = text
-    out = open(file_name, 'w')
+    out = open(file_name, "w")
     out.writelines(lines)
     out.close()
 
 
 def get_file_basename(filename):
-    mypath, myname = os.path.split(filename)
-    basename, myext = os.path.splitext(myname)
-    return basename
-    
+    file_path, file_name = os.path.split(filename)
+    file_basename, file_ext = os.path.splitext(file_name)
+    return file_path, file_basename, file_ext
+
+
+def display_info_pamel(title, body, time):
+    iface.messageBar().pushMessage(title, body, level=Qgis.Info, duration=time)
+
+
+def save_labels_to_output_dir(label_geojson_file, output_label_directory, vlayer):
+    """Save puput geojson files."""
+    _, file_basename, file_ext = get_file_basename(label_geojson_file)
+    output_geojson_file = os.path.join(output_label_directory, f"{file_basename}.{file_ext}")
+    QgsVectorFileWriter.writeAsVectorFormat(vlayer, output_geojson_file, "utf-8", vlayer.crs(), "GeoJSON")
+    return
 
 
 # def set_output_json_file(self, output_json_file):

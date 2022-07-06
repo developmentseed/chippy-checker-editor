@@ -35,11 +35,18 @@ from qgis.utils import *  # iface should be in here
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
+import simplejson as json, csv
+from pathlib import Path
 
 # Import the code for the DockWidget
 from .chippy_checker_editor_dockwidget import ChippyCheckerEditorDockWidget
 from .chippy_checker_session import EditSession
-from .chippy_checker_utils import get_record_status_file, get_file_basename
+from .chippy_checker_utils import (
+    get_record_status_file,
+    get_file_basename,
+    display_info_pamel,
+    save_labels_to_output_dir
+)
 
 import os.path
 
@@ -233,45 +240,128 @@ class ChippyCheckerEditor:
         self.dockwidget.lineEdit_OutputLabelDir.setText(folder)
         self.output_label_directory = folder
 
-    def display_item(self, vector_file, raster_file):
+    def setupSession(self, record_dir, chip_dir, in_label_dir, out_label_dir):
+        self.raster_file = None
+        self.vector_file = None
 
-        objs_layers = QgsProject.instance().layerTreeRoot().children()
-        layers = [layer.name() for layer in objs_layers]
+        self.chip_base = chip_dir
+        self.in_label_base = in_label_dir
+        self.out_label_base = out_label_dir
 
-        print(layers)
-        if self.active_chip_id not in layers:
+        self.set_record_dir(record_dir)
 
-            # load chip, label into QGIS
-            rlayer = self.iface.addRasterLayer(raster_file)
-            display_name = get_file_basename(vector_file)
-            # self.vlayer = self.iface.addVectorLayer(vector_file, display_name, "ogr")
-            # self.vlayer.startEditing()
-            vlayer = QgsVectorLayer(vector_file, display_name, "ogr")
+        self.set_file_pairs()
+        self.reset_chip()
 
-            # check feature count and whether geometry type is polygon
-            if vlayer.geometryType() != 2:
-                # create new vector layer in ram and load it
-                vlayer = QgsVectorLayer("Polygon", display_name, "memory")
+    def set_file_pairs(self):
+        """
+        set image and label file pairs of the form (anyname).tif and (samename).geojson
+        """
+        chip_files = os.listdir(self.chip_base)
 
-            # for use later, in writing out files
-            self.vlayer = vlayer
-            self.rlayer = rlayer
+        # extract image names and construct the paths of the label files
+        basenames = [os.path.splitext(cfile)[0] for cfile in chip_files if cfile.endswith(".tif")]
 
-            QgsProject.instance().addMapLayer(vlayer)
-            iface.setActiveLayer(vlayer)
-            iface.mapCanvas().setExtent(rlayer.extent())
-            iface.mapCanvas().zoomToFullExtent()
-            activelayer = iface.activeLayer()
-            # change style of vector layer
-            myRenderer = activelayer.renderer()
-            mySymbol1 = QgsFillSymbol.createSimple({"color": "255,0,0,0", "color_border": "#FF0000", "width_border": "0.4"})
-            myRenderer.setSymbol(mySymbol1)
-            activelayer.triggerRepaint()
+        file_pairs = []
+        for basename in basenames:
+            the_image = os.path.join(self.chip_base, f"{basename}.tif")
+            the_geojson = os.path.join(self.in_label_base, f"{basename}.geojson")
+            if not os.path.exists(the_geojson):
+                raise FileNotFoundError(f"Missing geojson file: {the_geojson}")
+            file_pairs.append((the_image, the_geojson))
+        self.chip_iterator = iter(file_pairs)
 
-            # toggle label editing
-            iface.actionToggleEditing().trigger()
+    def set_output_json_file(self, output_json_file):
+        self.output_json_file = output_json_file
+        self.json_records = None
+        if os.path.exists(output_json_file):
+            with open(output_json_file, "r") as fh:
+                records = fh.read()
+                if records:
+                    self.json_records = json.loads(records)
+                else:
+                    self.json_records = []
+        else:
+            self.json_records = []
+        self.current_json_record = {}
 
+    def set_record_dir(self, record_dir):
+        output_json_file = os.path.join(record_dir, "chip_review.json")
+        self.set_output_json_file(output_json_file)
+
+    def reset_chip(self):
+        """
+        operations common to accepting and rejecting the previous chip
+        """
+        # clear the previous project
+        # prevent it asking you to save changes
+        #         the_project = QgsProject.instance()
+        #         the_project.setDirty(False)
+        #         the_project.removeAllMapLayers()
+        # #        the_project.clear()
+
+        while True:
+            try:
+                the_pair = next(self.chip_iterator)
+            except StopIteration:
+                self.show_end_of_chips_mbox()
+                self.display_info_pamel("Heads up", "You have no more labels to edit!", 5)
+                return
+
+            raster_file = the_pair[0]
+            vector_file = the_pair[1]
+            if not self.chip_already_reviewed(raster_file, vector_file):
+                break
+
+        self.raster_file = raster_file
+        self.vector_file = vector_file
+
+        # load chip, label into QGIS
+        rlayer = iface.addRasterLayer(self.raster_file)
+        _, file_basename, _ = get_file_basename(self.vector_file)
+        vlayer = QgsVectorLayer(self.vector_file, file_basename, "ogr")
+
+        # check feature count and whether geometry type is polygon
+        if vlayer.geometryType() != 2:
+            # create new vector layer in ram and load it
+            vlayer = QgsVectorLayer("Polygon", file_basename, "memory")
+
+        # for use later, in writing out files
+        self.vlayer = vlayer
+        self.rlayer = rlayer
+
+        QgsProject.instance().addMapLayer(vlayer)
+        iface.setActiveLayer(vlayer)
+        iface.mapCanvas().setExtent(rlayer.extent())
+        iface.mapCanvas().zoomToFullExtent()
+        activelayer = iface.activeLayer()
+        # change style of vector layer
+        myRenderer = activelayer.renderer()
+        mySymbol1 = QgsFillSymbol.createSimple({"color": "255,0,0,0", "color_border": "#FF0000", "width_border": "0.4"})
+        myRenderer.setSymbol(mySymbol1)
+        activelayer.triggerRepaint()
+
+        # toggle label editing
+        iface.actionToggleEditing().trigger()
+
+        # reset json record and comment box
+        self.current_json_record = {}
+        self.current_json_record["chip"] = raster_file
+        self.current_json_record["label"] = vector_file
+        self.dockwidget.textEdit_CommentBox.setText("")
+        self.dockwidget.textEdit_CommentBox.setPlaceholderText("Your Comment Here")
         return
+
+    # Modified CJ 2022.04.13 to check only basenames, in case you are on different paths or different machines
+    def chip_already_reviewed(self, raster_file, vector_file):
+        r_stem = Path(raster_file).stem
+        v_stem = Path(vector_file).stem
+        for chip_record in self.json_records:
+            cr_stem = Path(chip_record["chip"]).stem
+            vr_stem = Path(chip_record["label"]).stem
+            if vr_stem == v_stem and cr_stem == r_stem:
+                return True
+        return False
 
     ##### Select chips inputs dir #####
     def start_task(self):
@@ -284,42 +374,62 @@ class ChippyCheckerEditor:
         input_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/labels"
         output_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/ouput_labels"
 
-        # EditSession(
-        #     self.iface,
-        #     records_directory,
-        #     chips_directory,
-        #     input_label_directory,
-        #     output_label_directory,
-        # )
+        self.setupSession(
+            records_directory,
+            chips_directory,
+            input_label_directory,
+            output_label_directory,
+        )
 
-        record_review_file = get_record_status_file(records_directory, chips_directory, input_label_directory)
+    def write_to_output_json_file(self):
+        if self.output_json_file == None:
+            print("json output file not defined")
+            return
+        with open(self.output_json_file, "w") as outfile:
+            outfile.write(json.dumps(self.json_records))
+        # self.writeCsvFile()
 
-        with open(record_review_file, "r") as temp_file:
-            with open(f"{record_review_file}.csv", "w") as status_file:
+    def get_comment(self):
+        """Get comment from extEdit
 
-                for line in temp_file:
-                    chip_id, exist_geojson_label, review_status = line.split(",")
-                    self.edition_completed = False
-                    vector_file = f"{input_label_directory}/{chip_id}.geojson"
-                    raster_file = f"{chips_directory}/{chip_id}.tif"
+        Returns:
+            str: comment
+        """
+        comment = self.dockwidget.textEdit_CommentBox.toPlainText()
+        if comment is None:
+            comment = ""
+        return comment
 
-                    
-                    # self.display_item(vector_file, raster_file)
+    def save_action(self, action_status):
+        """Save action either accepted or rejected
 
-                    while True:
-                        self.active_chip_id = chip_id
-                        self.display_item(vector_file, raster_file)
+        Args:
+            action_status (Bool): Action estatus
+        """
+        QgsProject.instance().clear()
+        self.current_json_record["accept"] = action_status
+        self.current_json_record["comment"] = self.get_comment()
+        self.json_records.append(self.current_json_record)
+        self.current_json_record = {}
+        self.write_to_output_json_file()
+        self.reset_chip()
+        return
 
-                        if self.edition_completed:
-                            break
-
+    ############ Accept Action ############
     def accept_chip_action(self):
         print("accept")
-        self.edition_completed = True
+        # Export current layer to the output directory
+        if self.iface.activeLayer() is not None:
+            save_labels_to_output_dir(self.vector_file, self.out_label_base, self.vlayer)
 
+        print(f"ACCEPTED: {self.current_json_record['chip']}")
+        self.save_action(True)
+
+    ############ Reject Action ############
     def reject_chip_action(self):
         print("reject")
-        self.edition_completed = True
+        print(f"REJECTED: {self.current_json_record['chip']}")
+        self.save_action(False)
 
     def run(self):
         """Run method that loads and starts the plugin"""
@@ -339,9 +449,7 @@ class ChippyCheckerEditor:
                 self.dockwidget.pushButton_Chips.clicked.connect(self.select_input_chips_dir)
                 self.dockwidget.pushButton_InputLabelDir.clicked.connect(self.select_input_label_dir)
                 self.dockwidget.pushButton_OutputLabelDir.clicked.connect(self.select_output_label_dir)
-
                 self.dockwidget.pushButton_LoadTask.clicked.connect(self.start_task)
-
                 self.dockwidget.pushButton_AcceptChip.clicked.connect(self.accept_chip_action)
                 self.dockwidget.pushButton_RejectChip.clicked.connect(self.reject_chip_action)
 
@@ -352,3 +460,5 @@ class ChippyCheckerEditor:
             # TODO: fix to allow choice of dock location
             self.iface.addDockWidget(Qt.LeftDockWidgetArea, self.dockwidget)
             self.dockwidget.show()
+            # Remove later
+            QgsProject.instance().clear()
