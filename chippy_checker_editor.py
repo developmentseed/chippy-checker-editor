@@ -25,11 +25,22 @@
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QFileDialog
+
 # Initialize Qt resources from file resources.py
 from .resources import *
 
+from qgis.core import *
+from qgis.gui import *
+from qgis.utils import *  # iface should be in here
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+
 # Import the code for the DockWidget
 from .chippy_checker_editor_dockwidget import ChippyCheckerEditorDockWidget
+from .chippy_checker_session import EditSession
+from .chippy_checker_utils import get_record_status_file, get_file_basename
+
 import os.path
 
 
@@ -51,11 +62,8 @@ class ChippyCheckerEditor:
         self.plugin_dir = os.path.dirname(__file__)
 
         # initialize locale
-        locale = QSettings().value('locale/userLocale')[0:2]
-        locale_path = os.path.join(
-            self.plugin_dir,
-            'i18n',
-            'ChippyCheckerEditor_{}.qm'.format(locale))
+        locale = QSettings().value("locale/userLocale")[0:2]
+        locale_path = os.path.join(self.plugin_dir, "i18n", "ChippyCheckerEditor_{}.qm".format(locale))
 
         if os.path.exists(locale_path):
             self.translator = QTranslator()
@@ -64,16 +72,15 @@ class ChippyCheckerEditor:
 
         # Declare instance attributes
         self.actions = []
-        self.menu = self.tr(u'&Chippy Checker Editor')
+        self.menu = self.tr("&Chippy Checker Editor")
         # TODO: We are going to let the user set this up in a future iteration
-        self.toolbar = self.iface.addToolBar(u'ChippyCheckerEditor')
-        self.toolbar.setObjectName(u'ChippyCheckerEditor')
+        self.toolbar = self.iface.addToolBar("ChippyCheckerEditor")
+        self.toolbar.setObjectName("ChippyCheckerEditor")
 
-        #print "** INITIALIZING ChippyCheckerEditor"
+        # print "** INITIALIZING ChippyCheckerEditor"
 
         self.pluginIsActive = False
         self.dockwidget = None
-
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -88,8 +95,7 @@ class ChippyCheckerEditor:
         :rtype: QString
         """
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
-        return QCoreApplication.translate('ChippyCheckerEditor', message)
-
+        return QCoreApplication.translate("ChippyCheckerEditor", message)
 
     def add_action(
         self,
@@ -101,7 +107,8 @@ class ChippyCheckerEditor:
         add_to_toolbar=True,
         status_tip=None,
         whats_this=None,
-        parent=None):
+        parent=None,
+    ):
         """Add a toolbar icon to the toolbar.
 
         :param icon_path: Path to the icon for this action. Can be a resource
@@ -156,31 +163,29 @@ class ChippyCheckerEditor:
             self.toolbar.addAction(action)
 
         if add_to_menu:
-            self.iface.addPluginToMenu(
-                self.menu,
-                action)
+            self.iface.addPluginToMenu(self.menu, action)
 
         self.actions.append(action)
 
         return action
 
-
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
-        icon_path = ':/plugins/chippy_checker_editor/icon.png'
+        icon_path = ":/plugins/chippy_checker_editor/icon.png"
         self.add_action(
             icon_path,
-            text=self.tr(u'Chippy Checker Editor'),
+            text=self.tr("Chippy Checker Editor"),
             callback=self.run,
-            parent=self.iface.mainWindow())
+            parent=self.iface.mainWindow(),
+        )
 
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
 
     def onClosePlugin(self):
         """Cleanup necessary items here when plugin dockwidget is closed"""
 
-        #print "** CLOSING ChippyCheckerEditor"
+        # print "** CLOSING ChippyCheckerEditor"
 
         # disconnects
         self.dockwidget.closingPlugin.disconnect(self.onClosePlugin)
@@ -193,16 +198,13 @@ class ChippyCheckerEditor:
 
         self.pluginIsActive = False
 
-
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
 
-        #print "** UNLOAD ChippyCheckerEditor"
+        # print "** UNLOAD ChippyCheckerEditor"
 
         for action in self.actions:
-            self.iface.removePluginMenu(
-                self.tr(u'&Chippy Checker Editor'),
-                action)
+            self.iface.removePluginMenu(self.tr("&Chippy Checker Editor"), action)
             self.iface.removeToolBarIcon(action)
         # remove the toolbar
         del self.toolbar
@@ -211,16 +213,113 @@ class ChippyCheckerEditor:
     def select_input_records_dir(self):
         folder = str(QFileDialog.getExistingDirectory(self.dockwidget, "Select Records Directory"))
         self.dockwidget.lineEdit_Records.setText(folder)
+        self.records_directory = folder
 
     ##### Select chips inputs dir #####
     def select_input_chips_dir(self):
         folder = str(QFileDialog.getExistingDirectory(self.dockwidget, "Select Chips Directory"))
         self.dockwidget.lineEdit_Chips.setText(folder)
+        self.chips_directory = folder
+
+    ##### Select output label dir #####
+    def select_input_label_dir(self):
+        folder = str(QFileDialog.getExistingDirectory(self.dockwidget, "Select Input Label Directory"))
+        self.dockwidget.lineEdit_InputLabelDir.setText(folder)
+        self.input_label_directory = folder
+
+    ##### Select output label dir #####
+    def select_output_label_dir(self):
+        folder = str(QFileDialog.getExistingDirectory(self.dockwidget, "Select Output Label Directory"))
+        self.dockwidget.lineEdit_OutputLabelDir.setText(folder)
+        self.output_label_directory = folder
+
+    def display_item(self, vector_file, raster_file):
+
+        objs_layers = QgsProject.instance().layerTreeRoot().children()
+        layers = [layer.name() for layer in objs_layers]
+
+        print(layers)
+        if self.active_chip_id not in layers:
+
+            # load chip, label into QGIS
+            rlayer = self.iface.addRasterLayer(raster_file)
+            display_name = get_file_basename(vector_file)
+            # self.vlayer = self.iface.addVectorLayer(vector_file, display_name, "ogr")
+            # self.vlayer.startEditing()
+            vlayer = QgsVectorLayer(vector_file, display_name, "ogr")
+
+            # check feature count and whether geometry type is polygon
+            if vlayer.geometryType() != 2:
+                # create new vector layer in ram and load it
+                vlayer = QgsVectorLayer("Polygon", display_name, "memory")
+
+            # for use later, in writing out files
+            self.vlayer = vlayer
+            self.rlayer = rlayer
+
+            QgsProject.instance().addMapLayer(vlayer)
+            iface.setActiveLayer(vlayer)
+            iface.mapCanvas().setExtent(rlayer.extent())
+            iface.mapCanvas().zoomToFullExtent()
+            activelayer = iface.activeLayer()
+            # change style of vector layer
+            myRenderer = activelayer.renderer()
+            mySymbol1 = QgsFillSymbol.createSimple({"color": "255,0,0,0", "color_border": "#FF0000", "width_border": "0.4"})
+            myRenderer.setSymbol(mySymbol1)
+            activelayer.triggerRepaint()
+
+            # toggle label editing
+            iface.actionToggleEditing().trigger()
+
+        return
 
     ##### Select chips inputs dir #####
-    def select_output_dir(self):
-        folder = str(QFileDialog.getExistingDirectory(self.dockwidget, "Select Output Directory"))
-        self.dockwidget.lineEdit_Output.setText(folder)
+    def start_task(self):
+        # records_dir = self.dockwidget.lineEdit_Records.text()
+        # chips_dir = self.dockwidget.lineEdit_Chips.text()
+        # output_dir = self.dockwidget.lineEdit_Output.text()
+
+        records_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets"
+        chips_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/source"
+        input_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/labels"
+        output_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/ouput_labels"
+
+        # EditSession(
+        #     self.iface,
+        #     records_directory,
+        #     chips_directory,
+        #     input_label_directory,
+        #     output_label_directory,
+        # )
+
+        record_review_file = get_record_status_file(records_directory, chips_directory, input_label_directory)
+
+        with open(record_review_file, "r") as temp_file:
+            with open(f"{record_review_file}.csv", "w") as status_file:
+
+                for line in temp_file:
+                    chip_id, exist_geojson_label, review_status = line.split(",")
+                    self.edition_completed = False
+                    vector_file = f"{input_label_directory}/{chip_id}.geojson"
+                    raster_file = f"{chips_directory}/{chip_id}.tif"
+
+                    
+                    # self.display_item(vector_file, raster_file)
+
+                    while True:
+                        self.active_chip_id = chip_id
+                        self.display_item(vector_file, raster_file)
+
+                        if self.edition_completed:
+                            break
+
+    def accept_chip_action(self):
+        print("accept")
+        self.edition_completed = True
+
+    def reject_chip_action(self):
+        print("reject")
+        self.edition_completed = True
 
     def run(self):
         """Run method that loads and starts the plugin"""
@@ -228,7 +327,7 @@ class ChippyCheckerEditor:
         if not self.pluginIsActive:
             self.pluginIsActive = True
 
-            #print "** STARTING ChippyCheckerEditor"
+            print("** STARTING ChippyCheckerEditor")
 
             # dockwidget may not exist if:
             #    first run of plugin
@@ -238,7 +337,13 @@ class ChippyCheckerEditor:
                 self.dockwidget = ChippyCheckerEditorDockWidget()
                 self.dockwidget.pushButton_Records.clicked.connect(self.select_input_records_dir)
                 self.dockwidget.pushButton_Chips.clicked.connect(self.select_input_chips_dir)
-                self.dockwidget.pushButton_Output.clicked.connect(self.select_output_dir)
+                self.dockwidget.pushButton_InputLabelDir.clicked.connect(self.select_input_label_dir)
+                self.dockwidget.pushButton_OutputLabelDir.clicked.connect(self.select_output_label_dir)
+
+                self.dockwidget.pushButton_LoadTask.clicked.connect(self.start_task)
+
+                self.dockwidget.pushButton_AcceptChip.clicked.connect(self.accept_chip_action)
+                self.dockwidget.pushButton_RejectChip.clicked.connect(self.reject_chip_action)
 
             # connect to provide cleanup on closing of dockwidget
             self.dockwidget.closingPlugin.connect(self.onClosePlugin)
