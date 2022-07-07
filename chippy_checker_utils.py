@@ -1,6 +1,4 @@
-import sys, os, re, argparse
-from matplotlib.patches import Polygon
-from pathlib import Path
+import os
 import simplejson as json
 import csv
 from qgis.core import *
@@ -18,13 +16,12 @@ def set_file_pairs(chips_directory, input_label_directory):
     file_pairs = []
     missing_label_files = []
     for chip_basename in chip_basename_files:
-        chip_file = os.path.join(chips_directory, f"{chip_basename}.tif")
         geojson_label_file = os.path.join(input_label_directory, f"{chip_basename}.geojson")
         if not os.path.exists(geojson_label_file):
             # raise FileNotFoundError(f"Missing geojson file: {geojson_label_file}")
             missing_label_files.append(geojson_label_file)
         else:
-            file_pairs.append((chip_file, geojson_label_file))
+            file_pairs.append((chip_basename))
     return iter(file_pairs), len(file_pairs), missing_label_files
 
 
@@ -79,11 +76,10 @@ def read_status_records(output_csv_status_file):
             datareader = csv.reader(csvfile)
             for index, row in enumerate(datareader):
                 if index != 0:
-                    chip, label, accept, comment = row
+                    chip_id, accept, comment = row
                     json_records.append(
                         {
-                            "chip": chip,
-                            "label": label,
+                            "chip_id": chip_id,
                             "accept": json.loads(accept.lower()),
                             "comment": comment,
                         }

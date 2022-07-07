@@ -249,15 +249,14 @@ class ChippyCheckerEditor:
         """
         while True:
             try:
-                the_pair = next(self.chip_iterator)
+                chip_id = next(self.chip_iterator)
             except StopIteration:
                 display_info_pamel("Heads up", "You have no more labels to edit!", 5)
                 return
 
-            raster_file = the_pair[0]
-            vector_file = the_pair[1]
-
-            if not self.chip_already_reviewed(raster_file, vector_file):
+            raster_file = os.path.join(self.chips_directory, f"{chip_id}.tif")
+            vector_file = os.path.join(self.input_label_directory, f"{chip_id}.geojson")
+            if not self.chip_already_reviewed(chip_id):
                 break
 
         self.raster_file = raster_file
@@ -296,22 +295,19 @@ class ChippyCheckerEditor:
 
         # reset json record and comment box
         self.current_json_record = {}
-        self.current_json_record["chip"] = raster_file
-        self.current_json_record["label"] = vector_file
+        self.current_json_record["chip_id"] = chip_id
+        # self.current_json_record["label"] = vector_file
+
         self.dockwidget.textEdit_CommentBox.setText("")
         self.dockwidget.textEdit_CommentBox.setPlaceholderText("Your Comment Here")
         return
 
-    # Modified CJ 2022.04.13 to check only basenames, in case you are on different paths or different machines
-    def chip_already_reviewed(self, raster_file, vector_file):
-        r_stem = Path(raster_file).stem
-        v_stem = Path(vector_file).stem
-        for chip_record in self.json_records:
-            cr_stem = Path(chip_record["chip"]).stem
-            vr_stem = Path(chip_record["label"]).stem
-            if vr_stem == v_stem and cr_stem == r_stem:
-                return True
-        return False
+    def chip_already_reviewed(self, chip_id):
+        reviwed_chips = [c["chip_id"] for c in self.json_records]
+        chip_was_reviwed = False
+        if chip_id in reviwed_chips:
+            chip_was_reviwed = True
+        return chip_was_reviwed
 
     ##### Select chips inputs dir #####
     def start_task(self):
@@ -330,8 +326,9 @@ class ChippyCheckerEditor:
         self.raster_file = None
         self.vector_file = None
 
-        self.chip_base = chips_directory
-        self.in_label_base = input_label_directory
+        self.chips_directory = chips_directory
+        self.input_label_directory = input_label_directory
+
         self.out_label_base = output_label_directory
 
         # Set records status file
@@ -340,6 +337,7 @@ class ChippyCheckerEditor:
 
         self.json_records = read_status_records(self.output_csv_status_file)
 
+        print(self.json_records)
         # Init a empty record
         self.current_json_record = {}
 
@@ -350,7 +348,6 @@ class ChippyCheckerEditor:
         self.dockwidget.label_NumberChips.setText(str(self.number_chips))
         self.dockwidget.label_ReviewedChips.setText(str(len(self.json_records)))
         if len(missing_label_files) > 0:
-            print(missing_label_files)
             self.dockwidget.label_NumberMissingLabels.setText(str(len(missing_label_files)))
 
         # Start interacting
@@ -392,13 +389,13 @@ class ChippyCheckerEditor:
         if self.iface.activeLayer() is not None:
             save_labels_to_output_dir(self.vector_file, self.out_label_base, self.vlayer)
 
-        print(f"ACCEPTED: {self.current_json_record['chip']}")
+        print(f"ACCEPTED: {self.chips_directory}/{self.current_json_record['chip_id']}.tif")
         self.save_action(True)
 
     ############ Reject Action ############
     def reject_chip_action(self):
         print("reject")
-        print(f"REJECTED: {self.current_json_record['chip']}")
+        print(f"REJECTED: {self.chips_directory}/{self.current_json_record['chip_id']}.tif")
         self.save_action(False)
 
     def run(self):
