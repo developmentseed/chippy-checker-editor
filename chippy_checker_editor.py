@@ -251,17 +251,20 @@ class ChippyCheckerEditor:
             try:
                 the_pair = next(self.chip_iterator)
             except StopIteration:
-                self.show_end_of_chips_mbox()
-                self.display_info_pamel("Heads up", "You have no more labels to edit!", 5)
+                display_info_pamel("Heads up", "You have no more labels to edit!", 5)
                 return
 
             raster_file = the_pair[0]
             vector_file = the_pair[1]
+
             if not self.chip_already_reviewed(raster_file, vector_file):
                 break
 
         self.raster_file = raster_file
         self.vector_file = vector_file
+
+        # Check if vector_file is None
+        # if self.vector_file is not None:
 
         # load chip, label into QGIS
         rlayer = iface.addRasterLayer(self.raster_file)
@@ -312,8 +315,7 @@ class ChippyCheckerEditor:
 
     ##### Select chips inputs dir #####
     def start_task(self):
-        """Start reviewing chips.
-        """
+        """Start reviewing chips."""
         # Clear all other layers
         QgsProject.instance().clear()
 
@@ -324,7 +326,7 @@ class ChippyCheckerEditor:
         chips_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/source"
         input_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/labels"
         output_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/ouput_labels"
-        
+
         self.raster_file = None
         self.vector_file = None
 
@@ -333,14 +335,23 @@ class ChippyCheckerEditor:
         self.out_label_base = output_label_directory
 
         # Set records status file
-        self.output_json_file = os.path.join(records_directory, "chip_review.json")
-        self.json_records = read_status_records(self.output_json_file)
+        self.output_csv_status_file = os.path.join(records_directory, "chip_review.csv")
+        self.output_missing_labels_file = os.path.join(records_directory, "missing_labels.csv")
+
+        self.json_records = read_status_records(self.output_csv_status_file)
 
         # Init a empty record
         self.current_json_record = {}
 
         # Match files
-        self.chip_iterator, self.number_chips = set_file_pairs(chips_directory, input_label_directory)
+        self.chip_iterator, self.number_chips, missing_label_files = set_file_pairs(chips_directory, input_label_directory)
+
+        ## Set stats
+        self.dockwidget.label_NumberChips.setText(str(self.number_chips))
+        self.dockwidget.label_ReviewedChips.setText(str(len(self.json_records)))
+        if len(missing_label_files) > 0:
+            print(missing_label_files)
+            self.dockwidget.label_NumberMissingLabels.setText(str(len(missing_label_files)))
 
         # Start interacting
         self.reset_chip()
@@ -368,8 +379,8 @@ class ChippyCheckerEditor:
         self.json_records.append(self.current_json_record)
         self.current_json_record = {}
         # Write in json and csv file th estatus
-        write_status_records(self.output_json_file, self.json_records)
-        write_status_records_csv(self.output_json_file, self.json_records)
+        write_status_records_csv(self.output_csv_status_file, self.json_records)
+        self.dockwidget.label_ReviewedChips.setText(str(len(self.json_records)))
 
         self.reset_chip()
         return
