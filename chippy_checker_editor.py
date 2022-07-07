@@ -43,7 +43,8 @@ from pathlib import Path
 from .chippy_checker_editor_dockwidget import ChippyCheckerEditorDockWidget
 from .chippy_checker_utils import (
     get_file_basename,
-    display_info_pamel,
+    display_info_alert,
+    check_folder,
     save_labels_to_output_dir,
     write_json_missing_records,
     set_file_pairs,
@@ -251,7 +252,7 @@ class ChippyCheckerEditor:
             try:
                 chip_id = next(self.chip_iterator)
             except StopIteration:
-                display_info_pamel("Heads up", "You have no more labels to edit!", 5)
+                display_info_alert("Heads up", "You have no more labels to edit!", 5)
                 return
 
             raster_file = os.path.join(self.chips_directory, f"{chip_id}.tif")
@@ -313,17 +314,22 @@ class ChippyCheckerEditor:
         # Clear all other layers
         QgsProject.instance().clear()
 
-        # records_dir = self.dockwidget.lineEdit_Records.text()
-        # chips_dir = self.dockwidget.lineEdit_Chips.text()
-        # output_dir = self.dockwidget.lineEdit_Output.text()
-        records_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets"
-        chips_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/source"
-        input_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/labels"
-        output_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/ouput_labels"
+        records_directory = self.dockwidget.lineEdit_Records.text()
+        chips_directory = self.dockwidget.lineEdit_Chips.text()
+        input_label_directory = self.dockwidget.lineEdit_InputLabelDir.text()
+        output_label_directory = self.dockwidget.lineEdit_OutputLabelDir.text()
+        # records_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets"
+        # chips_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/source"
+        # input_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/labels"
+        # output_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/ouput_labels"
+
+        if check_folder(records_directory, chips_directory, input_label_directory, output_label_directory):
+            return
 
         self.raster_file = None
         self.vector_file = None
 
+        self.chips_directory = records_directory
         self.chips_directory = chips_directory
         self.input_label_directory = input_label_directory
         self.out_label_base = output_label_directory

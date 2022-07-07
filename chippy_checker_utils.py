@@ -31,8 +31,12 @@ def get_file_basename(filename):
     return file_path, file_basename, file_ext
 
 
-def display_info_pamel(title, body, time):
+def display_info_alert(title, body, time):
     iface.messageBar().pushMessage(title, body, level=Qgis.Info, duration=time)
+
+
+def display_warning_alert(title, body, time):
+    iface.messageBar().pushMessage(title, body, level=Qgis.Warning, duration=time)
 
 
 def save_labels_to_output_dir(label_geojson_file, output_label_directory, vlayer):
@@ -85,3 +89,25 @@ def read_status_records(output_csv_status_file):
                         }
                     )
         return json_records
+
+
+def check_folder(records_directory, chips_directory, input_label_directory, output_label_directory):
+    # print(records_directory, chips_directory, input_label_directory, output_label_directory)
+    flag = False
+    if "".__eq__(records_directory) or not os.path.isdir(records_directory):
+        flag = True
+        display_warning_alert("Missing Record directory", "Select a existing record directory", 5)
+
+    if "".__eq__(chips_directory) or not os.path.isdir(chips_directory):
+        flag = True
+        display_warning_alert("Missing Chips directory", "Select a existing chips directory", 5)
+
+    if "".__eq__(input_label_directory) or not os.path.isdir(input_label_directory):
+        flag = True
+        display_warning_alert("Missing Imput Label directory", "Select a existing imput label directory", 5)
+
+    if "".__eq__(output_label_directory) or not os.path.isdir(output_label_directory):
+        flag = True
+        display_warning_alert("Missing Opuput Labels directory", "Select a existing output label directory", 5)
+
+    return flag

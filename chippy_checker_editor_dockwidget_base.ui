@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>406</width>
-    <height>382</height>
+    <height>390</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -19,7 +19,7 @@
   <property name="minimumSize">
    <size>
     <width>406</width>
-    <height>382</height>
+    <height>390</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -27,10 +27,13 @@
   </property>
   <widget class="QWidget" name="dockWidgetContents">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="8" column="1" colspan="2">
-     <widget class="QPushButton" name="pushButton_AcceptChip">
+    <item row="7" column="0" colspan="3">
+     <widget class="QTextEdit" name="textEdit_CommentBox"/>
+    </item>
+    <item row="5" column="0" colspan="3">
+     <widget class="QPushButton" name="pushButton_LoadTask">
       <property name="text">
-       <string>Accept Chip</string>
+       <string>Load Task</string>
       </property>
      </widget>
     </item>
@@ -49,7 +52,7 @@
        </size>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -185,22 +188,23 @@
       </widget>
      </widget>
     </item>
-    <item row="8" column="0">
-     <widget class="QPushButton" name="pushButton_RejectChip">
-      <property name="text">
-       <string>Reject Chip</string>
-      </property>
-     </widget>
-    </item>
-    <item row="5" column="0" colspan="3">
-     <widget class="QPushButton" name="pushButton_LoadTask">
-      <property name="text">
-       <string>Load Task</string>
-      </property>
-     </widget>
-    </item>
-    <item row="7" column="0" colspan="3">
-     <widget class="QTextEdit" name="textEdit_CommentBox"/>
+    <item row="8" column="0" rowspan="2" colspan="3">
+     <layout class="QGridLayout" name="gridLayout_3">
+      <item row="0" column="0">
+       <widget class="QPushButton" name="pushButton_RejectChip">
+        <property name="text">
+         <string>Reject Chip</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QPushButton" name="pushButton_AcceptChip">
+        <property name="text">
+         <string>Accept Chip</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </item>
    </layout>
   </widget>
