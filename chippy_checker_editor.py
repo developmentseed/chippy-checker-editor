@@ -45,7 +45,7 @@ from .chippy_checker_utils import (
     get_file_basename,
     display_info_pamel,
     save_labels_to_output_dir,
-    write_status_records,
+    write_json_missing_records,
     set_file_pairs,
     read_status_records,
     write_status_records_csv,
@@ -256,14 +256,12 @@ class ChippyCheckerEditor:
 
             raster_file = os.path.join(self.chips_directory, f"{chip_id}.tif")
             vector_file = os.path.join(self.input_label_directory, f"{chip_id}.geojson")
+
             if not self.chip_already_reviewed(chip_id):
                 break
 
         self.raster_file = raster_file
         self.vector_file = vector_file
-
-        # Check if vector_file is None
-        # if self.vector_file is not None:
 
         # load chip, label into QGIS
         rlayer = iface.addRasterLayer(self.raster_file)
@@ -328,7 +326,6 @@ class ChippyCheckerEditor:
 
         self.chips_directory = chips_directory
         self.input_label_directory = input_label_directory
-
         self.out_label_base = output_label_directory
 
         # Set records status file
@@ -337,7 +334,6 @@ class ChippyCheckerEditor:
 
         self.json_records = read_status_records(self.output_csv_status_file)
 
-        print(self.json_records)
         # Init a empty record
         self.current_json_record = {}
 
@@ -349,7 +345,7 @@ class ChippyCheckerEditor:
         self.dockwidget.label_ReviewedChips.setText(str(len(self.json_records)))
         if len(missing_label_files) > 0:
             self.dockwidget.label_NumberMissingLabels.setText(str(len(missing_label_files)))
-
+            write_json_missing_records(self.output_missing_labels_file, missing_label_files)
         # Start interacting
         self.reset_chip()
 
@@ -375,8 +371,10 @@ class ChippyCheckerEditor:
         self.current_json_record["comment"] = self.get_comment()
         self.json_records.append(self.current_json_record)
         self.current_json_record = {}
-        # Write in json and csv file th estatus
+        # Write in json and csv file the status
+
         write_status_records_csv(self.output_csv_status_file, self.json_records)
+
         self.dockwidget.label_ReviewedChips.setText(str(len(self.json_records)))
 
         self.reset_chip()
@@ -384,17 +382,14 @@ class ChippyCheckerEditor:
 
     ############ Accept Action ############
     def accept_chip_action(self):
-        print("accept")
         # Export current layer to the output directory
         if self.iface.activeLayer() is not None:
             save_labels_to_output_dir(self.vector_file, self.out_label_base, self.vlayer)
-
         print(f"ACCEPTED: {self.chips_directory}/{self.current_json_record['chip_id']}.tif")
         self.save_action(True)
 
     ############ Reject Action ############
     def reject_chip_action(self):
-        print("reject")
         print(f"REJECTED: {self.chips_directory}/{self.current_json_record['chip_id']}.tif")
         self.save_action(False)
 
@@ -405,10 +400,6 @@ class ChippyCheckerEditor:
             self.pluginIsActive = True
 
             print("** STARTING ChippyCheckerEditor")
-
-            # dockwidget may not exist if:
-            #    first run of plugin
-            #    removed on close (see self.onClosePlugin method)
             if self.dockwidget == None:
                 # Create the dockwidget (after translation) and keep reference
                 self.dockwidget = ChippyCheckerEditorDockWidget()
@@ -422,9 +413,6 @@ class ChippyCheckerEditor:
 
             # connect to provide cleanup on closing of dockwidget
             self.dockwidget.closingPlugin.connect(self.onClosePlugin)
-
-            # show the dockwidget
-            # TODO: fix to allow choice of dock location
             self.iface.addDockWidget(Qt.LeftDockWidgetArea, self.dockwidget)
             self.dockwidget.show()
             # Remove later

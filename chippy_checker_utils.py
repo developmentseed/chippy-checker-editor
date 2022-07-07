@@ -43,11 +43,11 @@ def save_labels_to_output_dir(label_geojson_file, output_label_directory, vlayer
     return
 
 
-def write_status_records(status_json_file, json_records):
+def write_json_missing_records(status_json_file, list_miss_records):
     if status_json_file == None:
         print("json output file not defined")
     with open(status_json_file, "w") as outfile:
-        outfile.write(json.dumps(json_records))
+        outfile.write("\n".join(list_miss_records))
     return
 
 
