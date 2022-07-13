@@ -399,6 +399,13 @@ class ChippyCheckerEditor:
         print(f"REJECTED: {self.chips_directory}/{self.current_json_record['chip_id']}.tif")
         self.save_action(False)
 
+    def clean_directories(self):
+        self.dockwidget.lineEdit_OutputLabelDir.setText("")
+        self.dockwidget.lineEdit_Records.setText("")
+        self.dockwidget.lineEdit_Chips.setText("")
+        self.dockwidget.lineEdit_InputLabelDir.setText("")
+        self.dockwidget.lineEdit_OutputLabelDir.setText("")
+        
     def run(self):
         """Run method that loads and starts the plugin"""
 
@@ -417,9 +424,13 @@ class ChippyCheckerEditor:
                 self.dockwidget.pushButton_AcceptChip.clicked.connect(self.accept_chip_action)
                 self.dockwidget.pushButton_RejectChip.clicked.connect(self.reject_chip_action)
 
+            
+            
             # connect to provide cleanup on closing of dockwidget
             self.dockwidget.closingPlugin.connect(self.onClosePlugin)
             self.iface.addDockWidget(Qt.LeftDockWidgetArea, self.dockwidget)
             self.dockwidget.show()
-            # Remove later
-            QgsProject.instance().clear()
+            # # Remove later
+            # QgsProject.instance().clear()
+            # Clean directories
+            self.clean_directories()

@@ -42,7 +42,7 @@ def display_warning_alert(title, body, time):
 def save_labels_to_output_dir(label_geojson_file, output_label_directory, vlayer):
     """Save puput geojson files."""
     _, file_basename, file_ext = get_file_basename(label_geojson_file)
-    output_geojson_file = os.path.join(output_label_directory, f"{file_basename}.{file_ext}")
+    output_geojson_file = os.path.join(output_label_directory, f"{file_basename}{file_ext}")
     QgsVectorFileWriter.writeAsVectorFormat(vlayer, output_geojson_file, "utf-8", vlayer.crs(), "GeoJSON")
     return
 
