@@ -6,7 +6,7 @@ from qgis.gui import *
 from qgis.utils import *
 
 
-class bidirectional_iterator(object):
+class list_iterator(object):
     def __init__(self, collection):
         self.collection = collection
         self.index = 0
@@ -46,7 +46,7 @@ def set_file_pairs(chips_directory, input_label_directory):
         else:
             file_pairs.append((chip_basename))
     file_pairs.sort()
-    return bidirectional_iterator(file_pairs), len(file_pairs), missing_label_files
+    return list_iterator(file_pairs), len(file_pairs), missing_label_files
 
 
 def get_file_basename(filename):
