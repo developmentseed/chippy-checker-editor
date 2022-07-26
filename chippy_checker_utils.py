@@ -68,7 +68,9 @@ def save_labels_to_output_dir(label_geojson_file, output_label_directory, vlayer
     _, file_basename, file_ext = get_file_basename(label_geojson_file)
     output_geojson_file = os.path.join(output_label_directory, f"{file_basename}{file_ext}")
     QgsVectorFileWriter.writeAsVectorFormat(vlayer, output_geojson_file, "utf-8", vlayer.crs(), "GeoJSON")
-    return
+    if os.path.exists(output_geojson_file):
+        return True
+    return False
 
 
 def write_json_missing_records(status_json_file, list_miss_records):
@@ -95,7 +97,7 @@ def write_status_records_csv(output_csv_status_file, json_records):
 
 
 def read_status_records(output_csv_status_file):
-    json_records = []
+    json_records = {}
     # Return empty list
     if not os.path.exists(output_csv_status_file):
         return json_records
@@ -105,13 +107,11 @@ def read_status_records(output_csv_status_file):
             for index, row in enumerate(datareader):
                 if index != 0:
                     chip_id, accept, comment = row
-                    json_records.append(
-                        {
-                            "chip_id": chip_id,
-                            "accept": json.loads(accept.lower()),
-                            "comment": comment,
-                        }
-                    )
+                    json_records[chip_id] = {
+                        "chip_id": chip_id,
+                        "accept": json.loads(accept.lower()),
+                        "comment": comment,
+                    }
         return json_records
 
 
