@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>406</width>
-    <height>390</height>
+    <height>424</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -19,7 +19,7 @@
   <property name="minimumSize">
    <size>
     <width>406</width>
-    <height>390</height>
+    <height>424</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -27,16 +27,6 @@
   </property>
   <widget class="QWidget" name="dockWidgetContents">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="7" column="0" colspan="3">
-     <widget class="QTextEdit" name="textEdit_CommentBox"/>
-    </item>
-    <item row="5" column="0" colspan="3">
-     <widget class="QPushButton" name="pushButton_LoadTask">
-      <property name="text">
-       <string>Load Task</string>
-      </property>
-     </widget>
-    </item>
     <item row="4" column="0" colspan="3">
      <widget class="QTabWidget" name="tabWidget">
       <property name="sizePolicy">
@@ -205,6 +195,23 @@
        </widget>
       </item>
      </layout>
+    </item>
+    <item row="7" column="0" colspan="3">
+     <widget class="QTextEdit" name="textEdit_CommentBox"/>
+    </item>
+    <item row="5" column="0" colspan="3">
+     <widget class="QPushButton" name="pushButton_LoadTask">
+      <property name="text">
+       <string>Load Task</string>
+      </property>
+     </widget>
+    </item>
+    <item row="10" column="0" colspan="3">
+     <widget class="QPushButton" name="pushButton_Backward">
+      <property name="text">
+       <string>Backward</string>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>

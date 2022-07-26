@@ -6,6 +6,29 @@ from qgis.gui import *
 from qgis.utils import *
 
 
+class bidirectional_iterator(object):
+    def __init__(self, collection):
+        self.collection = collection
+        self.index = 0
+
+    def next(self):
+        try:
+            result = self.collection[self.index]
+            self.index += 1
+        except IndexError:
+            raise StopIteration
+        return result
+
+    def prev(self):
+        self.index -= 1
+        if self.index < 0:
+            raise StopIteration
+        return self.collection[self.index]
+
+    def __iter__(self):
+        return self
+
+
 def set_file_pairs(chips_directory, input_label_directory):
     """
     set image and label file pairs tif and geojson
@@ -22,7 +45,8 @@ def set_file_pairs(chips_directory, input_label_directory):
             missing_label_files.append(geojson_label_file)
         else:
             file_pairs.append((chip_basename))
-    return iter(file_pairs), len(file_pairs), missing_label_files
+    file_pairs.sort()
+    return bidirectional_iterator(file_pairs), len(file_pairs), missing_label_files
 
 
 def get_file_basename(filename):
