@@ -6,6 +6,35 @@ from qgis.gui import *
 from qgis.utils import *
 
 
+class list_iterator(object):
+    """List iterator to get Next and Previous items
+
+    Args:
+        object (_type_): _description_
+    """
+
+    def __init__(self, collection):
+        self.collection = collection
+        self.index = 0
+
+    def next(self):
+        try:
+            result = self.collection[self.index]
+            self.index += 1
+        except IndexError:
+            raise StopIteration
+        return result
+
+    def prev(self):
+        self.index -= 1
+        if self.index < 0:
+            raise StopIteration
+        return self.collection[self.index]
+
+    def __iter__(self):
+        return self
+
+
 def set_file_pairs(chips_directory, input_label_directory):
     """
     set image and label file pairs tif and geojson
@@ -22,7 +51,8 @@ def set_file_pairs(chips_directory, input_label_directory):
             missing_label_files.append(geojson_label_file)
         else:
             file_pairs.append((chip_basename))
-    return iter(file_pairs), len(file_pairs), missing_label_files
+    file_pairs.sort()
+    return list_iterator(file_pairs), len(file_pairs), missing_label_files
 
 
 def get_file_basename(filename):
@@ -32,10 +62,14 @@ def get_file_basename(filename):
 
 
 def display_info_alert(title, body, time):
+    if title is None:
+        title = "Info:"
     iface.messageBar().pushMessage(title, body, level=Qgis.Info, duration=time)
 
 
 def display_warning_alert(title, body, time):
+    if title is None:
+        title = "Warning:"
     iface.messageBar().pushMessage(title, body, level=Qgis.Warning, duration=time)
 
 
@@ -44,7 +78,9 @@ def save_labels_to_output_dir(label_geojson_file, output_label_directory, vlayer
     _, file_basename, file_ext = get_file_basename(label_geojson_file)
     output_geojson_file = os.path.join(output_label_directory, f"{file_basename}{file_ext}")
     QgsVectorFileWriter.writeAsVectorFormat(vlayer, output_geojson_file, "utf-8", vlayer.crs(), "GeoJSON")
-    return
+    if os.path.exists(output_geojson_file):
+        return True
+    return False
 
 
 def write_json_missing_records(status_json_file, list_miss_records):
@@ -71,7 +107,7 @@ def write_status_records_csv(output_csv_status_file, json_records):
 
 
 def read_status_records(output_csv_status_file):
-    json_records = []
+    json_records = {}
     # Return empty list
     if not os.path.exists(output_csv_status_file):
         return json_records
@@ -81,13 +117,11 @@ def read_status_records(output_csv_status_file):
             for index, row in enumerate(datareader):
                 if index != 0:
                     chip_id, accept, comment = row
-                    json_records.append(
-                        {
-                            "chip_id": chip_id,
-                            "accept": json.loads(accept.lower()),
-                            "comment": comment,
-                        }
-                    )
+                    json_records[chip_id] = {
+                        "chip_id": chip_id,
+                        "accept": json.loads(accept.lower()),
+                        "comment": comment,
+                    }
         return json_records
 
 

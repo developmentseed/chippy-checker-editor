@@ -23,6 +23,8 @@
  ***************************************************************************/
 """
 from cProfile import label
+
+from sqlalchemy import null
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QFileDialog
@@ -196,16 +198,12 @@ class ChippyCheckerEditor:
     def onClosePlugin(self):
         """Cleanup necessary items here when plugin dockwidget is closed"""
 
-        # print "** CLOSING ChippyCheckerEditor"
+        # Save progress in case plugin is close
+        json_records_list = list(self.json_records.values())
+        write_status_records_csv(self.output_csv_status_file, json_records_list)
 
         # disconnects
         self.dockwidget.closingPlugin.disconnect(self.onClosePlugin)
-
-        # remove this statement if dockwidget is to remain
-        # for reuse if plugin is reopened
-        # Commented next statement since it causes QGIS crashe
-        # when closing the docked window:
-        # self.dockwidget = None
 
         self.pluginIsActive = False
 
@@ -244,31 +242,48 @@ class ChippyCheckerEditor:
         self.dockwidget.lineEdit_OutputLabelDir.setText(folder)
         self.output_label_directory = folder
 
-    def reset_chip(self):
-        """
-        operations common to accepting and rejecting the previous chip
+    def reset_chip(self, backward):
+        """operations common to accepting and rejecting the previous chip
+
+        Args:
+            backward (Bool): Backwards if True
         """
         while True:
             try:
-                chip_id = next(self.chip_iterator)
+                if backward:
+                    chip_id = self.chip_iterator.prev()
+                    if chip_id == self.current_json_record["chip_id"]:
+                        chip_id = self.chip_iterator.prev()
+                else:
+                    chip_id = self.chip_iterator.next()
+
             except StopIteration:
-                display_info_alert("Heads up", "You have no more labels to edit!", 5)
+                if backward:
+                    display_info_alert(None, "No more previous items", 5)
+                else:
+                    display_info_alert(None, "No more labels to edit", 5)
+
                 return
 
             raster_file = os.path.join(self.chips_directory, f"{chip_id}.tif")
-            vector_file = os.path.join(self.input_label_directory, f"{chip_id}.geojson")
+            if backward:
+                vector_file = os.path.join(self.output_label_directory, f"{chip_id}.geojson")
+                if not os.path.exists(vector_file):
+                    vector_file = os.path.join(self.input_label_directory, f"{chip_id}.geojson")
+            else:
+                vector_file = os.path.join(self.input_label_directory, f"{chip_id}.geojson")
 
-            if not self.chip_already_reviewed(chip_id):
+            if not self.chip_already_reviewed(chip_id, backward):
                 break
 
         self.raster_file = raster_file
         self.vector_file = vector_file
+        QgsProject.instance().setDirty(False)
 
         # load chip, label into QGIS
         rlayer = iface.addRasterLayer(self.raster_file)
         _, file_basename, _ = get_file_basename(self.vector_file)
         vlayer = QgsVectorLayer(self.vector_file, file_basename, "ogr")
-
         # check feature count and whether geometry type is polygon
         if vlayer.geometryType() != 2:
             # create new vector layer in ram and load it
@@ -301,11 +316,13 @@ class ChippyCheckerEditor:
         self.dockwidget.textEdit_CommentBox.setPlaceholderText("Your Comment Here")
         return
 
-    def chip_already_reviewed(self, chip_id):
-        reviwed_chips = [c["chip_id"] for c in self.json_records]
+    def chip_already_reviewed(self, chip_id, backward):
+        reviewed_chips = self.json_records.keys()
         chip_was_reviwed = False
-        if chip_id in reviwed_chips:
+        if chip_id in reviewed_chips:
             chip_was_reviwed = True
+        if backward:
+            chip_was_reviwed = False
         return chip_was_reviwed
 
     ##### Select chips inputs dir #####
@@ -319,9 +336,9 @@ class ChippyCheckerEditor:
         input_label_directory = self.dockwidget.lineEdit_InputLabelDir.text()
         output_label_directory = self.dockwidget.lineEdit_OutputLabelDir.text()
         # records_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets"
-        # chips_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/source"
-        # input_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/labels"
-        # output_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/ouput_labels"
+        # chips_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/source2"
+        # input_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/labels2"
+        # output_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/ouput_labels2"
 
         if check_folder(records_directory, chips_directory, input_label_directory, output_label_directory):
             return
@@ -332,7 +349,7 @@ class ChippyCheckerEditor:
         self.chips_directory = records_directory
         self.chips_directory = chips_directory
         self.input_label_directory = input_label_directory
-        self.out_label_base = output_label_directory
+        self.output_label_directory = output_label_directory
 
         # Set records status file
         self.output_csv_status_file = os.path.join(records_directory, "chip_review.csv")
@@ -348,12 +365,13 @@ class ChippyCheckerEditor:
 
         ## Set stats
         self.dockwidget.label_NumberChips.setText(str(self.number_chips))
-        self.dockwidget.label_ReviewedChips.setText(str(len(self.json_records)))
+        self.dockwidget.label_ReviewedChips.setText(str(len(list(self.json_records.keys()))))
+
         if len(missing_label_files) > 0:
             self.dockwidget.label_NumberMissingLabels.setText(str(len(missing_label_files)))
             write_json_missing_records(self.output_missing_labels_file, missing_label_files)
         # Start interacting
-        self.reset_chip()
+        self.reset_chip(False)
 
     def get_comment(self):
         """Get comment from extEdit
@@ -373,24 +391,31 @@ class ChippyCheckerEditor:
             action_status (Bool): Action estatus
         """
         QgsProject.instance().clear()
+
         self.current_json_record["accept"] = action_status
         self.current_json_record["comment"] = self.get_comment()
-        self.json_records.append(self.current_json_record)
+
+        self.json_records[self.current_json_record["chip_id"]] = self.current_json_record
+
         self.current_json_record = {}
         # Write in json and csv file the status
 
-        write_status_records_csv(self.output_csv_status_file, self.json_records)
+        # Save multiples of 5 items
+        json_records_list = list(self.json_records.values())
 
-        self.dockwidget.label_ReviewedChips.setText(str(len(self.json_records)))
+        if len(json_records_list) % 5 == 0:
+            write_status_records_csv(self.output_csv_status_file, json_records_list)
 
-        self.reset_chip()
+        self.dockwidget.label_ReviewedChips.setText(str(len(json_records_list)))
+
+        self.reset_chip(False)
         return
 
     ############ Accept Action ############
     def accept_chip_action(self):
         # Export current layer to the output directory
         if self.iface.activeLayer() is not None:
-            save_labels_to_output_dir(self.vector_file, self.out_label_base, self.vlayer)
+            save_labels_to_output_dir(self.vector_file, self.output_label_directory, self.vlayer)
         print(f"ACCEPTED: {self.chips_directory}/{self.current_json_record['chip_id']}.tif")
         self.save_action(True)
 
@@ -399,13 +424,19 @@ class ChippyCheckerEditor:
         print(f"REJECTED: {self.chips_directory}/{self.current_json_record['chip_id']}.tif")
         self.save_action(False)
 
+    ############ backward Action ############
+    def backward_chip_action(self):
+        print(f"BACKWARD")
+        QgsProject.instance().clear()
+        self.reset_chip(True)
+
     def clean_directories(self):
         self.dockwidget.lineEdit_OutputLabelDir.setText("")
         self.dockwidget.lineEdit_Records.setText("")
         self.dockwidget.lineEdit_Chips.setText("")
         self.dockwidget.lineEdit_InputLabelDir.setText("")
         self.dockwidget.lineEdit_OutputLabelDir.setText("")
-        
+
     def run(self):
         """Run method that loads and starts the plugin"""
 
@@ -423,14 +454,14 @@ class ChippyCheckerEditor:
                 self.dockwidget.pushButton_LoadTask.clicked.connect(self.start_task)
                 self.dockwidget.pushButton_AcceptChip.clicked.connect(self.accept_chip_action)
                 self.dockwidget.pushButton_RejectChip.clicked.connect(self.reject_chip_action)
+                self.dockwidget.pushButton_Backward.clicked.connect(self.backward_chip_action)
 
-            
-            
+                self.dockwidget.closingPlugin
+
             # connect to provide cleanup on closing of dockwidget
             self.dockwidget.closingPlugin.connect(self.onClosePlugin)
             self.iface.addDockWidget(Qt.LeftDockWidgetArea, self.dockwidget)
             self.dockwidget.show()
-            # # Remove later
-            # QgsProject.instance().clear()
+            QgsProject.instance().clear()
             # Clean directories
             self.clean_directories()
