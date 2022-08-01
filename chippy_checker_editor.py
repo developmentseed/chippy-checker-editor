@@ -23,6 +23,8 @@
  ***************************************************************************/
 """
 from cProfile import label
+
+from sqlalchemy import null
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QFileDialog
@@ -244,7 +246,7 @@ class ChippyCheckerEditor:
         """operations common to accepting and rejecting the previous chip
 
         Args:
-            backward (Bool): True is backward is enable
+            backward (Bool): Backwards if True
         """
         while True:
             try:
@@ -257,15 +259,17 @@ class ChippyCheckerEditor:
 
             except StopIteration:
                 if backward:
-                    display_info_alert("Heads up", "No more backward items!", 5)
+                    display_info_alert(None, "No more previous items", 5)
                 else:
-                    display_info_alert("Heads up", "You have no more labels to edit!", 5)
+                    display_info_alert(None, "No more labels to edit", 5)
 
                 return
 
             raster_file = os.path.join(self.chips_directory, f"{chip_id}.tif")
             if backward:
                 vector_file = os.path.join(self.output_label_directory, f"{chip_id}.geojson")
+                if not os.path.exists(vector_file):
+                    vector_file = os.path.join(self.input_label_directory, f"{chip_id}.geojson")
             else:
                 vector_file = os.path.join(self.input_label_directory, f"{chip_id}.geojson")
 
@@ -313,9 +317,9 @@ class ChippyCheckerEditor:
         return
 
     def chip_already_reviewed(self, chip_id, backward):
-        reviwed_chips = self.json_records.keys()
+        reviewed_chips = self.json_records.keys()
         chip_was_reviwed = False
-        if chip_id in reviwed_chips:
+        if chip_id in reviewed_chips:
             chip_was_reviwed = True
         if backward:
             chip_was_reviwed = False

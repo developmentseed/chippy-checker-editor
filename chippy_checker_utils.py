@@ -7,6 +7,12 @@ from qgis.utils import *
 
 
 class list_iterator(object):
+    """List iterator to get Next and Previous items
+
+    Args:
+        object (_type_): _description_
+    """
+
     def __init__(self, collection):
         self.collection = collection
         self.index = 0
@@ -56,10 +62,14 @@ def get_file_basename(filename):
 
 
 def display_info_alert(title, body, time):
+    if title is None:
+        title = "Info:"
     iface.messageBar().pushMessage(title, body, level=Qgis.Info, duration=time)
 
 
 def display_warning_alert(title, body, time):
+    if title is None:
+        title = "Warning:"
     iface.messageBar().pushMessage(title, body, level=Qgis.Warning, duration=time)
 
 
