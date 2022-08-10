@@ -77,10 +77,10 @@ def save_labels_to_output_dir(label_geojson_file, output_label_directory, vlayer
     """Save puput geojson files."""
     _, file_basename, file_ext = get_file_basename(label_geojson_file)
     output_geojson_file = os.path.join(output_label_directory, f"{file_basename}{file_ext}")
-    QgsVectorFileWriter.writeAsVectorFormat(vlayer, output_geojson_file, "utf-8", vlayer.crs(), "GeoJSON")
     if os.path.exists(output_geojson_file):
-        return True
-    return False
+        os.remove(output_geojson_file)
+    QgsVectorFileWriter.writeAsVectorFormat(vlayer, output_geojson_file, "utf-8", vlayer.crs(), "GeoJSON")
+    return
 
 
 def write_json_missing_records(status_json_file, list_miss_records):
