@@ -334,10 +334,10 @@ class ChippyCheckerEditor:
         chips_directory = self.dockwidget.lineEdit_Chips.text()
         input_label_directory = self.dockwidget.lineEdit_InputLabelDir.text()
         output_label_directory = self.dockwidget.lineEdit_OutputLabelDir.text()
-        # records_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets"
-        # chips_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/source2"
-        # input_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/labels2"
-        # output_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/ouput_labels2"
+        records_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets"
+        chips_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/source2"
+        input_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/labels2"
+        output_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/output2"
 
         if check_folder(records_directory, chips_directory, input_label_directory, output_label_directory):
             return
@@ -402,8 +402,7 @@ class ChippyCheckerEditor:
         # Save multiples of 5 items
         json_records_list = list(self.json_records.values())
 
-        if len(json_records_list) % 5 == 0:
-            write_status_records_csv(self.output_csv_status_file, json_records_list)
+        write_status_records_csv(self.output_csv_status_file, json_records_list)
 
         self.dockwidget.label_ReviewedChips.setText(str(len(json_records_list)))
 
