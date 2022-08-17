@@ -335,10 +335,10 @@ class ChippyCheckerEditor:
         chips_directory = self.dockwidget.lineEdit_Chips.text()
         input_label_directory = self.dockwidget.lineEdit_InputLabelDir.text()
         output_label_directory = self.dockwidget.lineEdit_OutputLabelDir.text()
-        records_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets"
-        chips_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/source2"
-        input_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/labels2"
-        output_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/output2"
+        # records_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets"
+        # chips_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/source2"
+        # input_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/labels2"
+        # output_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/output2"
 
         if check_folder(records_directory, chips_directory, input_label_directory, output_label_directory):
             return
