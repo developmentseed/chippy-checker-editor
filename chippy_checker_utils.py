@@ -1,4 +1,5 @@
 import os
+from traceback import print_tb
 import simplejson as json
 import csv
 from qgis.core import *
@@ -80,6 +81,7 @@ def save_labels_to_output_dir(label_geojson_file, output_label_directory, vlayer
     if os.path.exists(output_geojson_file):
         os.remove(output_geojson_file)
     QgsVectorFileWriter.writeAsVectorFormat(vlayer, output_geojson_file, "utf-8", vlayer.crs(), "GeoJSON")
+    vlayer.rollBack()
     return
 
 
@@ -138,10 +140,30 @@ def check_folder(records_directory, chips_directory, input_label_directory, outp
 
     if "".__eq__(input_label_directory) or not os.path.isdir(input_label_directory):
         flag = True
-        display_warning_alert("Missing Imput Label directory", "Select a existing imput label directory", 5)
+        display_warning_alert(
+            "Missing Imput Label directory",
+            "Select a existing imput label directory",
+            5,
+        )
 
     if "".__eq__(output_label_directory) or not os.path.isdir(output_label_directory):
         flag = True
-        display_warning_alert("Missing Opuput Labels directory", "Select a existing output label directory", 5)
-
+        display_warning_alert(
+            "Missing Opuput Labels directory",
+            "Select a existing output label directory",
+            5,
+        )
     return flag
+
+
+def clone_vlayer(vlayer):
+    layer_type = {"0": "Point", "1": "LineString", "2": "Polygon"}
+    str_source = layer_type[str(vlayer.geometryType())] + "?crs=epsg:" + str(vlayer.source())
+    mem_layer = QgsVectorLayer(str_source, vlayer.name() + "_temp", "memory")
+    feats = [feat for feat in vlayer.getFeatures()]
+    mem_layer_data = mem_layer.dataProvider()
+    attr = vlayer.dataProvider().fields().toList()
+    mem_layer_data.addAttributes(attr)
+    mem_layer.updateFields()
+    mem_layer_data.addFeatures(feats)
+    return mem_layer

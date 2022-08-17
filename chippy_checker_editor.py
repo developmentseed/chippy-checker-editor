@@ -51,6 +51,7 @@ from .chippy_checker_utils import (
     set_file_pairs,
     read_status_records,
     write_status_records_csv,
+    clone_vlayer,
 )
 
 import os.path
@@ -277,17 +278,17 @@ class ChippyCheckerEditor:
 
         self.raster_file = raster_file
         self.vector_file = vector_file
-        QgsProject.instance().setDirty(False)
+        # QgsProject.instance().setDirty(False)
 
         # load chip, label into QGIS
         rlayer = iface.addRasterLayer(self.raster_file)
         _, file_basename, _ = get_file_basename(self.vector_file)
         vlayer = QgsVectorLayer(self.vector_file, file_basename, "ogr")
-        # check feature count and whether geometry type is polygon
-        if vlayer.geometryType() != 2:
-            # create new vector layer in ram and load it
-            vlayer = QgsVectorLayer("Polygon", file_basename, "memory")
-
+        vlayer = clone_vlayer(vlayer)
+        # # check feature count and whether geometry type is polygon
+        # if vlayer.geometryType() != 2:
+        #     # create new vector layer in ram and load it
+        #     vlayer = QgsVectorLayer("Polygon", file_basename, "memory")
         # for use later, in writing out files
         self.vlayer = vlayer
         self.rlayer = rlayer
@@ -334,10 +335,10 @@ class ChippyCheckerEditor:
         chips_directory = self.dockwidget.lineEdit_Chips.text()
         input_label_directory = self.dockwidget.lineEdit_InputLabelDir.text()
         output_label_directory = self.dockwidget.lineEdit_OutputLabelDir.text()
-        # records_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets"
-        # chips_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/source2"
-        # input_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/labels2"
-        # output_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/output2"
+        records_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets"
+        chips_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/source2"
+        input_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/labels2"
+        output_label_directory = "/Users/ruben/Desktop/ramp_sierraleone_2022_05_31/assets/output2"
 
         if check_folder(records_directory, chips_directory, input_label_directory, output_label_directory):
             return
