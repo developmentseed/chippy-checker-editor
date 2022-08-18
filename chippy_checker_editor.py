@@ -22,8 +22,6 @@
  *                                                                         *
  ***************************************************************************/
 """
-from cProfile import label
-
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QFileDialog
@@ -37,8 +35,6 @@ from qgis.utils import *  # iface should be in here
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-import simplejson as json, csv
-from pathlib import Path
 
 # Import the code for the DockWidget
 from .chippy_checker_editor_dockwidget import ChippyCheckerEditorDockWidget

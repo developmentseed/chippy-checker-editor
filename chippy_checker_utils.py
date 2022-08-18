@@ -1,5 +1,4 @@
 import os
-from traceback import print_tb
 import simplejson as json
 import csv
 from qgis.core import *
