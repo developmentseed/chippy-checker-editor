@@ -22,8 +22,6 @@
  *                                                                         *
  ***************************************************************************/
 """
-from cProfile import label
-
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QFileDialog
@@ -37,8 +35,6 @@ from qgis.utils import *  # iface should be in here
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-import simplejson as json, csv
-from pathlib import Path
 
 # Import the code for the DockWidget
 from .chippy_checker_editor_dockwidget import ChippyCheckerEditorDockWidget
@@ -51,6 +47,7 @@ from .chippy_checker_utils import (
     set_file_pairs,
     read_status_records,
     write_status_records_csv,
+    clone_vlayer,
 )
 
 import os.path
@@ -277,18 +274,14 @@ class ChippyCheckerEditor:
 
         self.raster_file = raster_file
         self.vector_file = vector_file
-        QgsProject.instance().setDirty(False)
+        # QgsProject.instance().setDirty(False)
 
         # load chip, label into QGIS
         rlayer = iface.addRasterLayer(self.raster_file)
         _, file_basename, _ = get_file_basename(self.vector_file)
         vlayer = QgsVectorLayer(self.vector_file, file_basename, "ogr")
-        # check feature count and whether geometry type is polygon
-        if vlayer.geometryType() != 2:
-            # create new vector layer in ram and load it
-            vlayer = QgsVectorLayer("Polygon", file_basename, "memory")
+        vlayer = clone_vlayer(vlayer)
 
-        # for use later, in writing out files
         self.vlayer = vlayer
         self.rlayer = rlayer
 
