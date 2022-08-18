@@ -158,7 +158,10 @@ def check_folder(records_directory, chips_directory, input_label_directory, outp
 
 def clone_vlayer(vlayer):
     layer_type = {"0": "Point", "1": "LineString", "2": "Polygon"}
-    str_source = layer_type[str(vlayer.geometryType())] + "?crs=epsg:" + str(vlayer.source())
+    if str(vlayer.geometryType()) in layer_type.keys():
+        str_source = layer_type[str(vlayer.geometryType())] + "?crs=epsg:" + str(vlayer.source())
+    else:
+        str_source = "Polygon"
     mem_layer = QgsVectorLayer(str_source, vlayer.name() + "_temp", "memory")
     feats = [feat for feat in vlayer.getFeatures()]
     mem_layer_data = mem_layer.dataProvider()
