@@ -86,6 +86,7 @@ def save_labels_to_output_dir(label_geojson_file, output_label_directory, vlayer
 
 
 def write_json_missing_records(status_json_file, list_miss_records):
+    """Write a json file of the missing labels"""
     if status_json_file == None:
         print("json output file not defined")
     with open(status_json_file, "w") as outfile:
@@ -94,6 +95,7 @@ def write_json_missing_records(status_json_file, list_miss_records):
 
 
 def write_status_records_csv(output_csv_status_file, json_records):
+    """Write csv status file."""
     if os.path.exists(output_csv_status_file):
         os.remove(output_csv_status_file)
     # Write the csv file
@@ -109,6 +111,7 @@ def write_status_records_csv(output_csv_status_file, json_records):
 
 
 def read_status_records(output_csv_status_file):
+    """Read status file when restart the task."""
     json_records = {}
     # Return empty list
     if not os.path.exists(output_csv_status_file):
@@ -128,7 +131,7 @@ def read_status_records(output_csv_status_file):
 
 
 def check_folder(records_directory, chips_directory, input_label_directory, output_label_directory):
-    # print(records_directory, chips_directory, input_label_directory, output_label_directory)
+    """Check import folders."""
     flag = False
     if "".__eq__(records_directory) or not os.path.isdir(records_directory):
         flag = True
@@ -157,12 +160,13 @@ def check_folder(records_directory, chips_directory, input_label_directory, outp
 
 
 def clone_vlayer(vlayer):
+    """Clone vector layer in memory"""
     layer_type = {"0": "Point", "1": "LineString", "2": "Polygon"}
     if str(vlayer.geometryType()) in layer_type.keys():
         str_source = layer_type[str(vlayer.geometryType())] + "?crs=epsg:" + str(vlayer.source())
     else:
         str_source = "Polygon"
-    mem_layer = QgsVectorLayer(str_source, vlayer.name() + "_temp", "memory")
+    mem_layer = QgsVectorLayer(str_source, vlayer.name(), "memory")
     feats = [feat for feat in vlayer.getFeatures()]
     mem_layer_data = mem_layer.dataProvider()
     attr = vlayer.dataProvider().fields().toList()
