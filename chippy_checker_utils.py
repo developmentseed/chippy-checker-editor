@@ -101,11 +101,11 @@ def write_status_records_csv(output_csv_status_file, json_records):
     if len(json_records) == 0:
         return
     keys = json_records[0].keys()
-    csv_file = open(output_csv_status_file, "w")
-    dict_writer = csv.DictWriter(csv_file, keys)
-    dict_writer.writeheader()
-    dict_writer.writerows(json_records)
-    csv_file.close()
+    with open(output_csv_status_file, "w", newline="") as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=keys)
+        writer.writeheader()
+        for json_recoord in json_records:
+            writer.writerow(json_recoord)
     return
 
 
@@ -119,7 +119,7 @@ def read_status_records(output_csv_status_file):
         with open(output_csv_status_file, "r") as csvfile:
             datareader = csv.reader(csvfile)
             for index, row in enumerate(datareader):
-                if index != 0:
+                if index != 0 and len(row) > 0:
                     chip_id, accept, comment = row
                     json_records[chip_id] = {
                         "chip_id": chip_id,
